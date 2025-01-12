@@ -7,10 +7,11 @@ import {
   ActivityIndicator,
   ScrollView,
 } from "react-native";
-
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { Snackbar } from "react-native-paper";
+import NetInfo from "@react-native-community/netinfo";
 
 type Product = {
   id: string;
@@ -31,16 +32,53 @@ export default function PosScreen() {
   const [isLoadingPayment, setIsLoadingPayment] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSnackVisible, setSnackVisible] = useState(false);
+  const [isOnline, setIsOnline] = useState<boolean>(true);
 
   useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsOnline(state.isConnected || false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Load data from AsyncStorage on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const storedProducts = await AsyncStorage.getItem("products");
+
+        if (storedProducts) {
+          setProducts(JSON.parse(storedProducts));
+        }
+
+        // Fetch products if not found in storage
+        if (!storedProducts) {
+          fetchProducts();
+        } else {
+          setIsLoadingProducts(false);
+        }
+      } catch (e) {
+        console.error("Failed to load from AsyncStorage:", e);
+        setIsLoadingProducts(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // Fetch products from the API and save to AsyncStorage
+  const fetchProducts = async () => {
+    setIsLoadingProducts(true);
     fetch("https://kanpla-code-challenge.up.railway.app/products", {
       headers: {
         "x-auth-user": AUTH_USER_TOKEN,
       },
     })
       .then((response) => response.json())
-      .then((json) => {
+      .then(async (json) => {
         setProducts(json);
+        await AsyncStorage.setItem("products", JSON.stringify(json)); // Save to AsyncStorage
         setIsLoadingProducts(false);
       })
       .catch((error) => {
@@ -48,7 +86,7 @@ export default function PosScreen() {
         setSnackVisible(true);
         setIsLoadingProducts(false);
       });
-  }, []);
+  };
 
   const renderProduct = ({ item }: { item: Product }) => (
     <TouchableOpacity
@@ -65,39 +103,68 @@ export default function PosScreen() {
   //Not sure why this is returning 422
   const createOrder = () => {
     setIsLoadingOrder(true);
-
     // Optimistic update: immediately set the order ID to a temporary value
     const optimisticOrderId = "temp-order-id"; // Use a temporary order ID
     setOrderId(optimisticOrderId);
 
-    fetch("https://kanpla-code-challenge.up.railway.app/orders", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-auth-user": AUTH_USER_TOKEN,
-      },
-      body: JSON.stringify({
-        // total: 1,
-        total: basket
-          .reduce((acc, item) => acc + item.price_unit * (1 + item.vat_rate), 0)
-          .toFixed(2), //TODO:  Ensure the total is calculated correctly
-        // order_id: orderId, // Ensure this is set to a valid value
-        // basket_id: 1, // Ensure this is set to a valid value if required
-      }),
-    })
-      .then((response) => {
-        console.log("response is:", response);
-        return response.json();
-      })
-      .then((json) => {
-        setOrderId(json.id); // Update with the real order ID
+    const order = {
+      total: basket
+        .reduce((acc, item) => acc + item.price_unit * (1 + item.vat_rate), 0)
+        .toFixed(2),
+      basket,
+    };
+
+    // Save order locally if offline
+    AsyncStorage.setItem("pendingOrder", JSON.stringify(order))
+      .then(() => {
+        // Try to sync later when online
         setIsLoadingOrder(false);
+        if (isOnline) {
+          syncPendingOrders();
+        }
       })
       .catch((error) => {
-        setError(error.message || "Failed to create order. Please try again.");
+        setError(error.message || "Failed to create order offline.");
         setSnackVisible(true);
         setIsLoadingOrder(false);
-        setOrderId(null); // Revert to null in case of failure
+      });
+  };
+
+  const syncPendingOrders = () => {
+    AsyncStorage.getItem("pendingOrder")
+      .then((pendingOrderStr) => {
+        if (pendingOrderStr) {
+          const order = JSON.parse(pendingOrderStr);
+          fetch("https://kanpla-code-challenge.up.railway.app/orders", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-auth-user": AUTH_USER_TOKEN,
+            },
+            body: JSON.stringify({
+              total: order.total,
+              basket: order.basket,
+            }),
+          })
+            .then((response) => response.json())
+            .then((json) => {
+              setOrderId(json.id);
+              AsyncStorage.removeItem("pendingOrder"); // Clear pending order
+              setIsLoadingOrder(false);
+            })
+            .catch((error) => {
+              setError(
+                error.message || "Failed to sync order. Please try again."
+              );
+              setSnackVisible(true);
+              setIsLoadingOrder(false);
+            });
+        }
+      })
+      .catch((error) => {
+        setError(error.message || "Error retrieving pending order.");
+        setSnackVisible(true);
+        setIsLoadingOrder(false);
       });
   };
 
