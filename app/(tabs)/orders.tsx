@@ -47,7 +47,6 @@ export default function TabTwoScreen() {
 
       const data = await response.json();
       setOrders(data);
-      console.log("orders are: ", data);
     } catch (error: any) {
       console.error("Error fetching orders:", error);
       setError(error.message || "An unexpected error occurred.");

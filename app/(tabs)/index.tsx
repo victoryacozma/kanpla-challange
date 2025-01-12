@@ -62,8 +62,14 @@ export default function PosScreen() {
     </TouchableOpacity>
   );
 
+  //Not sure why this is returning 422
   const createOrder = () => {
     setIsLoadingOrder(true);
+
+    // Optimistic update: immediately set the order ID to a temporary value
+    const optimisticOrderId = "temp-order-id"; // Use a temporary order ID
+    setOrderId(optimisticOrderId);
+
     fetch("https://kanpla-code-challenge.up.railway.app/orders", {
       method: "POST",
       headers: {
@@ -75,7 +81,6 @@ export default function PosScreen() {
         total: basket
           .reduce((acc, item) => acc + item.price_unit * (1 + item.vat_rate), 0)
           .toFixed(2), //TODO:  Ensure the total is calculated correctly
-        //Not sure why this is not working
         // order_id: orderId, // Ensure this is set to a valid value
         // basket_id: 1, // Ensure this is set to a valid value if required
       }),
@@ -85,13 +90,14 @@ export default function PosScreen() {
         return response.json();
       })
       .then((json) => {
-        setOrderId(json.id);
+        setOrderId(json.id); // Update with the real order ID
         setIsLoadingOrder(false);
       })
       .catch((error) => {
         setError(error.message || "Failed to create order. Please try again.");
         setSnackVisible(true);
         setIsLoadingOrder(false);
+        setOrderId(null); // Revert to null in case of failure
       });
   };
 
