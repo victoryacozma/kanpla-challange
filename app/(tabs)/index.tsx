@@ -1,5 +1,11 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { StyleSheet, FlatList, TouchableOpacity, Text } from "react-native";
+import {
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  Text,
+  ActivityIndicator,
+} from "react-native";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -18,6 +24,9 @@ export default function PosScreen() {
   const [basket, setBasket] = useState<Product[]>([]);
   const [products, setProducts] = useState([] as Product[]);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [isLoadingOrder, setIsLoadingOrder] = useState(false);
+  const [isLoadingPayment, setIsLoadingPayment] = useState(false);
 
   useEffect(() => {
     fetch("https://kanpla-code-challenge.up.railway.app/products", {
@@ -26,8 +35,14 @@ export default function PosScreen() {
       },
     })
       .then((response) => response.json())
-      .then((json) => setProducts(json))
-      .catch((error) => console.error(error));
+      .then((json) => {
+        setProducts(json);
+        setIsLoadingProducts(false);
+      })
+      .catch((error) => {
+        console.error(error);
+        setIsLoadingProducts(false);
+      });
   }, []);
 
   const renderProduct = ({ item }: { item: Product }) => (
@@ -41,6 +56,7 @@ export default function PosScreen() {
   );
 
   const createOrder = () => {
+    setIsLoadingOrder(true);
     fetch("https://kanpla-code-challenge.up.railway.app/orders", {
       method: "POST",
       headers: {
@@ -51,17 +67,20 @@ export default function PosScreen() {
         total: basket.reduce((acc, item) => acc + item.price_unit, 0),
       }),
     })
-      .then((response) => {
-        console.log("response is: ", response.json());
-        return response.json();
-      })
+      .then((response) => response.json())
       .then((json) => {
         setOrderId(json.id);
+        setIsLoadingOrder(false);
       })
-      .catch((error) => console.error(error));
+      .catch((error) => {
+        console.error(error);
+        setIsLoadingOrder(false);
+      });
   };
 
   const payOrder = useCallback(() => {
+    if (!orderId) return;
+    setIsLoadingPayment(true);
     fetch(`https://kanpla-code-challenge.up.railway.app/payments`, {
       method: "POST",
       headers: {
@@ -92,24 +111,40 @@ export default function PosScreen() {
           .then((response) =>
             response.status === 201 ? response.json() : Promise.reject(response)
           )
-          .then((json) => {
+          .then(() => {
             setBasket([]);
             setOrderId(null);
+            setIsLoadingPayment(false);
           })
-          .catch((error) => console.error(error));
+          .catch((error) => {
+            console.error(error);
+            setIsLoadingPayment(false);
+          });
       })
-      .catch((error) => console.error(error));
+      .catch((error) => {
+        console.error(error);
+        setIsLoadingPayment(false);
+      });
   }, [orderId, basket]);
 
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={styles.productGrid}>
-        <FlatList
-          data={products}
-          renderItem={renderProduct}
-          keyExtractor={(item) => item.id}
-          numColumns={2}
-        />
+        {isLoadingProducts ? (
+          //TODO: use skeleton loaders to improve UX
+          <ActivityIndicator
+            size="large"
+            color="#000000"
+            style={styles.loadingIndicator}
+          />
+        ) : (
+          <FlatList
+            data={products}
+            renderItem={renderProduct}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+          />
+        )}
       </ThemedView>
 
       <ThemedView style={styles.basket}>
@@ -128,16 +163,28 @@ export default function PosScreen() {
           Total: ${basket.reduce((acc, item) => acc + item.price_unit, 0)}
         </ThemedText>
 
-        <TouchableOpacity style={styles.button} onPress={createOrder}>
-          <ThemedText style={styles.buttonText}>Create Order</ThemedText>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={createOrder}
+          disabled={isLoadingOrder}
+        >
+          {isLoadingOrder ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <ThemedText style={styles.buttonText}>Create Order</ThemedText>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.button, !orderId && { backgroundColor: "#555" }]}
           onPress={payOrder}
-          disabled={!orderId}
+          disabled={!orderId || isLoadingPayment}
         >
-          <ThemedText style={styles.buttonText}>Pay</ThemedText>
+          {isLoadingPayment ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <ThemedText style={styles.buttonText}>Pay</ThemedText>
+          )}
         </TouchableOpacity>
       </ThemedView>
     </ThemedView>
@@ -184,5 +231,10 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#ffffff",
     fontWeight: "bold",
+  },
+  loadingIndicator: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

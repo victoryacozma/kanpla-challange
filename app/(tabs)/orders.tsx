@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { FlatList, ActivityIndicator, View } from "react-native";
-import { StyleSheet } from "react-native";
+import { FlatList, ActivityIndicator, View, StyleSheet } from "react-native";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -10,6 +9,7 @@ const AUTH_USER_TOKEN =
 
 export default function TabTwoScreen() {
   const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchOrders();
@@ -25,14 +25,12 @@ export default function TabTwoScreen() {
           },
         }
       );
-      const data = (await response.json()) as {
-        id: string;
-        created_at: string;
-        amount: number;
-      }[];
+      const data = await response.json();
       setOrders(data);
     } catch (error) {
       console.error("Error fetching orders:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -41,17 +39,24 @@ export default function TabTwoScreen() {
       <ThemedView style={styles.titleContainer}>
         <ThemedText type="title">Paid Orders</ThemedText>
       </ThemedView>
-      <FlatList
-        data={orders}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <ThemedView style={styles.orderItem}>
-            <ThemedText>{item.id}</ThemedText>
-            <ThemedText>{item.created_at}</ThemedText>
-            <ThemedText>{item.amount}$</ThemedText>
-          </ThemedView>
-        )}
-      />
+
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#000000" />
+        </View>
+      ) : (
+        <FlatList
+          data={orders}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <ThemedView style={styles.orderItem}>
+              <ThemedText>{item.id}</ThemedText>
+              <ThemedText>{item.created_at}</ThemedText>
+              <ThemedText>{item.amount}$</ThemedText>
+            </ThemedView>
+          )}
+        />
+      )}
     </ThemedView>
   );
 }
