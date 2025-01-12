@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   Text,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
 
 import { ThemedText } from "@/components/ThemedText";
@@ -55,7 +56,9 @@ export default function PosScreen() {
       onPress={() => setBasket((prev) => [...prev, item])}
     >
       <Text style={styles.text}>{item.name}</Text>
-      <Text style={styles.text}>${item.price_unit * (item.vat_rate + 1)}</Text>
+      <Text style={styles.text}>
+        ${(item.price_unit * (item.vat_rate + 1)).toFixed(2)}
+      </Text>
     </TouchableOpacity>
   );
 
@@ -68,10 +71,19 @@ export default function PosScreen() {
         "x-auth-user": AUTH_USER_TOKEN,
       },
       body: JSON.stringify({
-        total: basket.reduce((acc, item) => acc + item.price_unit, 0),
+        // total: 1,
+        total: basket
+          .reduce((acc, item) => acc + item.price_unit * (1 + item.vat_rate), 0)
+          .toFixed(2), //TODO:  Ensure the total is calculated correctly
+        //Not sure why this is not working
+        // order_id: orderId, // Ensure this is set to a valid value
+        // basket_id: 1, // Ensure this is set to a valid value if required
       }),
     })
-      .then((response) => response.json())
+      .then((response) => {
+        console.log("response is:", response);
+        return response.json();
+      })
       .then((json) => {
         setOrderId(json.id);
         setIsLoadingOrder(false);
@@ -163,12 +175,16 @@ export default function PosScreen() {
           Basket
         </ThemedText>
 
-        {basket.map((item, index) => (
-          <ThemedView key={index} style={styles.basketItem}>
-            <Text style={styles.text}>{item.name}</Text>
-            <Text style={styles.text}>${item.price_unit}</Text>
-          </ThemedView>
-        ))}
+        <ScrollView>
+          {basket.map((item, index) => (
+            <ThemedView key={index} style={styles.basketItem}>
+              <Text style={styles.text}>{item.name}</Text>
+              <Text style={styles.text}>
+                ${(item.price_unit * (item.vat_rate + 1)).toFixed(2)}
+              </Text>
+            </ThemedView>
+          ))}
+        </ScrollView>
 
         {isSnackVisible ? (
           <Snackbar
@@ -185,7 +201,13 @@ export default function PosScreen() {
         ) : null}
 
         <ThemedText style={styles.text}>
-          Total: ${basket.reduce((acc, item) => acc + item.price_unit, 0)}
+          Total: $
+          {basket
+            .reduce(
+              (acc, item) => acc + item.price_unit * (item.vat_rate + 1),
+              0
+            )
+            .toFixed(2)}
         </ThemedText>
 
         <TouchableOpacity
@@ -240,6 +262,7 @@ const styles = StyleSheet.create({
   basketItem: {
     flexDirection: "row",
     justifyContent: "space-between",
+    backgroundColor: "gray",
     marginVertical: 5,
     padding: 5,
   },

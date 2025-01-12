@@ -3,6 +3,16 @@ import { FlatList, ActivityIndicator, StyleSheet } from "react-native";
 import { Snackbar } from "react-native-paper";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import { format } from "date-fns/format";
+
+type Order = {
+  amount_total: number;
+  basket_id: string | null;
+  created_at: string;
+  id: string;
+  status: string;
+  user_id: string;
+};
 
 const AUTH_USER_TOKEN =
   "eyJhbGciOiJIUzI1NiJ9.eyJleHBpcmVzSW4iOiIxMGQiLCJzdWIiOiJ2aWN0b3J5YS5jb3ptYUBnbWFpbC5jb20ifQ.4TbzcbPw1TalmrO4nXsAn98r127iMOL6xGcFBs83pEg"; // use your own token
@@ -37,14 +47,29 @@ export default function TabTwoScreen() {
 
       const data = await response.json();
       setOrders(data);
+      console.log("orders are: ", data);
     } catch (error: any) {
       console.error("Error fetching orders:", error);
       setError(error.message || "An unexpected error occurred.");
-      setSnackVisible(true); // Show Snackbar when error occurs
+      setSnackVisible(true);
     } finally {
       setLoading(false);
     }
   };
+
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return format(date, "MMMM dd, yyyy, h:mm a");
+  };
+
+  const renderItem = ({ item }: { item: Order }) => (
+    <ThemedView style={styles.orderItem}>
+      <ThemedText>Created by: {item.user_id}</ThemedText>
+      <ThemedText>Created at: {formatDate(item.created_at)}</ThemedText>
+      <ThemedText>Total: {item.amount_total}$</ThemedText>
+      <ThemedText>Status: {item.status}</ThemedText>
+    </ThemedView>
+  );
 
   return (
     <ThemedView style={styles.container}>
@@ -61,13 +86,7 @@ export default function TabTwoScreen() {
           data={orders}
           style={styles.flatListContainer}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <ThemedView style={styles.orderItem}>
-              <ThemedText>{item.id}</ThemedText>
-              <ThemedText>{item.created_at}</ThemedText>
-              <ThemedText>{item.amount}$</ThemedText>
-            </ThemedView>
-          )}
+          renderItem={renderItem}
         />
       )}
 
