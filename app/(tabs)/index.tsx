@@ -9,6 +9,7 @@ import {
 
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import { Snackbar } from "react-native-paper";
 
 type Product = {
   id: string;
@@ -27,6 +28,8 @@ export default function PosScreen() {
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [isLoadingOrder, setIsLoadingOrder] = useState(false);
   const [isLoadingPayment, setIsLoadingPayment] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSnackVisible, setSnackVisible] = useState(false);
 
   useEffect(() => {
     fetch("https://kanpla-code-challenge.up.railway.app/products", {
@@ -40,7 +43,8 @@ export default function PosScreen() {
         setIsLoadingProducts(false);
       })
       .catch((error) => {
-        console.error(error);
+        setError(error.message || "Failed to load products. Please try again.");
+        setSnackVisible(true);
         setIsLoadingProducts(false);
       });
   }, []);
@@ -73,7 +77,8 @@ export default function PosScreen() {
         setIsLoadingOrder(false);
       })
       .catch((error) => {
-        console.error(error);
+        setError(error.message || "Failed to create order. Please try again.");
+        setSnackVisible(true);
         setIsLoadingOrder(false);
       });
   };
@@ -117,12 +122,18 @@ export default function PosScreen() {
             setIsLoadingPayment(false);
           })
           .catch((error) => {
-            console.error(error);
+            setError(
+              error.message || "Failed to complete payment. Please try again."
+            );
+            setSnackVisible(true);
             setIsLoadingPayment(false);
           });
       })
       .catch((error) => {
-        console.error(error);
+        setError(
+          error.message || "Failed to process payment. Please try again."
+        );
+        setSnackVisible(true);
         setIsLoadingPayment(false);
       });
   }, [orderId, basket]);
@@ -158,6 +169,20 @@ export default function PosScreen() {
             <Text style={styles.text}>${item.price_unit}</Text>
           </ThemedView>
         ))}
+
+        {isSnackVisible ? (
+          <Snackbar
+            visible={isSnackVisible}
+            onDismiss={() => setSnackVisible(false)}
+            duration={3000}
+            action={{
+              label: "Dismiss",
+              onPress: () => setSnackVisible(false),
+            }}
+          >
+            {error}
+          </Snackbar>
+        ) : null}
 
         <ThemedText style={styles.text}>
           Total: ${basket.reduce((acc, item) => acc + item.price_unit, 0)}
