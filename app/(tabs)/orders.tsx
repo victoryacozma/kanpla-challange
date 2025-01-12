@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { FlatList, ActivityIndicator, View } from 'react-native';
-import { StyleSheet } from 'react-native';
+import React, { useEffect, useState } from "react";
+import { FlatList, ActivityIndicator, View } from "react-native";
+import { StyleSheet } from "react-native";
 
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
 
-const AUTH_USER_TOKEN = ''; // use your own token
+const AUTH_USER_TOKEN =
+  "eyJhbGciOiJIUzI1NiJ9.eyJleHBpcmVzSW4iOiIxMGQiLCJzdWIiOiJ2aWN0b3J5YS5jb3ptYUBnbWFpbC5jb20ifQ.4TbzcbPw1TalmrO4nXsAn98r127iMOL6xGcFBs83pEg"; // use your own token
 
 export default function TabTwoScreen() {
   const [orders, setOrders] = useState([]);
@@ -16,18 +17,24 @@ export default function TabTwoScreen() {
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch('https://kanpla-code-challenge.up.railway.app/orders', {
-        headers: {
-          "x-auth-user": AUTH_USER_TOKEN
+      const response = await fetch(
+        "https://kanpla-code-challenge.up.railway.app/orders",
+        {
+          headers: {
+            "x-auth-user": AUTH_USER_TOKEN,
+          },
         }
-      })
-      const data = await response.json() as { id: string, created_at: string, amount: number }[];
+      );
+      const data = (await response.json()) as {
+        id: string;
+        created_at: string;
+        amount: number;
+      }[];
       setOrders(data);
     } catch (error) {
-      console.error('Error fetching orders:', error);
+      console.error("Error fetching orders:", error);
     }
   };
-
 
   return (
     <ThemedView style={styles.container}>
@@ -45,7 +52,6 @@ export default function TabTwoScreen() {
           </ThemedView>
         )}
       />
-
     </ThemedView>
   );
 }
@@ -56,17 +62,17 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   titleContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   orderItem: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+    borderBottomColor: "#ccc",
   },
 });
