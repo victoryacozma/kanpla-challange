@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { FlatList, ActivityIndicator, StyleSheet } from "react-native";
-import { Snackbar } from "react-native-paper";
+import { styles } from "@/app/screens/OrdersScreen/styles";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, FlatList } from "react-native";
+import { Snackbar } from "react-native-paper";
 
 const AUTH_USER_TOKEN =
   "eyJhbGciOiJIUzI1NiJ9.eyJleHBpcmVzSW4iOiIxMGQiLCJzdWIiOiJ2aWN0b3J5YS5jb3ptYUBnbWFpbC5jb20ifQ.4TbzcbPw1TalmrO4nXsAn98r127iMOL6xGcFBs83pEg"; // use your own token
@@ -86,32 +87,3 @@ export default function TabTwoScreen() {
     </ThemedView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  titleContainer: {
-    flexDirection: "row",
-    gap: 8,
-    padding: 16,
-  },
-  flatListContainer: {
-    padding: 16,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  orderItem: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
-  },
-  snackBarContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-});
